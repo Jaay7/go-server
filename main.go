@@ -20,6 +20,23 @@ import (
 
 var client *mongo.Client
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Header("Access-Control-Allow-Methods", "POST,HEAD,PATCH, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
@@ -35,6 +52,7 @@ func main() {
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI(uri))
 
 	router := gin.New()
+	router.Use(CORSMiddleware())
 	router.Use(gin.Logger())
 
 	router.POST("/createjob", func(c *gin.Context) {
@@ -164,16 +182,21 @@ func main() {
 
 		token, err := CreateToken(*stu.CollegeID)
 		if err != nil {
-			c.JSON(http.StatusUnprocessableEntity, err.Error())
+			c.JSON(http.StatusUnprocessableEntity, gin.H{
+				"status":  http.StatusUnprocessableEntity,
+				"message": "Could not create token",
+			})
 			return
 		}
 
 		defer cancel()
 
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Login successful",
-			"pending": stu.Pending,
-			"token":   token,
+			"status":    http.StatusOK,
+			"message":   "Login successful",
+			"collegeid": stu.CollegeID,
+			"pending":   stu.Pending,
+			"token":     token,
 		})
 
 	})
@@ -297,12 +320,56 @@ func main() {
 		defer cancel()
 
 		c.JSON(http.StatusOK, gin.H{
+			"status":         http.StatusOK,
 			"studentDetails": student,
 			// "studentAddress":       address,
 			"studentContact": contact,
 			// "studentIdentity":      identity,
 			// "studentQualification": qualification,
 		})
+	})
+
+	router.POST("/changePassword/:collegeid", func(c *gin.Context) {
+		var student Student
+
+		isForgot := c.Query("forgot")
+
+		collegeid := c.Param("collegeid")
+		if err := c.BindJSON(&student); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		password := student.Password
+
+		if isForgot == "yes" {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "under process need to send a verification email",
+			})
+		} else {
+			newData := bson.M{
+				"$set": bson.M{
+					"password": password,
+					"pending":  false,
+				},
+			}
+			collection := client.Database("gomongo").Collection("student")
+
+			_, err := collection.UpdateOne(context.TODO(), bson.M{"collegeid": collegeid}, newData)
+
+			if err != nil {
+				log.Printf("Error, Reason: %v\n", err)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"status":  500,
+					"message": "Something went wrong",
+				})
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"status":  http.StatusOK,
+				"message": "password successfully updated",
+			})
+		}
 	})
 
 	//address routes
