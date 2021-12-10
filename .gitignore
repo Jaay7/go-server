@@ -1,1 +1,13 @@
 .env
+
+target/
+
+vendor/*
+!vendor/vendor.json
+bin/application
+
+.ionide/
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
