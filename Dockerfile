@@ -1,18 +1,29 @@
-FROM golang:alpine AS build
-RUN apk --no-cache add gcc g++ make
-RUN apk add git
-WORKDIR /go/src/app
-COPY . .
+FROM golang:1.14-alpine AS build
+RUN apk update && apk upgrade && \
+    apk add --no-cache git
+
+WORKDIR /tmp/app
+
+COPY go.mod .
+COPY go.sum .
 RUN go mod download
 
-ENV MONGODB_URI=mongodb://localhost:27017
-ENV APP_SECRET=1234567890
+COPY . .
 
-RUN GOOS=linux go build -ldflags="-s -w" -o ./bin/test .
+RUN GOOS=linux go build -o ./out/api .
 
-FROM alpine:3.13
-RUN apk --no-cache add ca-certificates
-WORKDIR /usr/bin
-COPY --from=build /go/src/app/bin /go/bin
-EXPOSE 8080
-ENTRYPOINT /go/bin/test --port 8080
+ENV MONGODB_URI=<your_mongodb_atlas_uri>
+ENV APP_SECRET=<your_app_secret>
+
+
+FROM alpine:latest
+
+RUN apk add ca-certificates
+
+COPY --from=build /tmp/app/out/api /app/api
+
+WORKDIR "/app"
+
+EXPOSE 5000
+
+CMD ["./api"]
