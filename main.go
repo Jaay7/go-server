@@ -44,11 +44,12 @@ func main() {
 	port := os.Getenv("PORT")
 
 	if port == "" {
-		port = "8000"
+		port = "5000"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	uri := os.Getenv("MONGODB_URI")
+	// uri := os.Getenv("MONGODB_URI")
+	uri := "" // place your atlas URI here
 	client, _ = mongo.Connect(ctx, options.Client().ApplyURI(uri))
 
 	router := gin.New()
@@ -291,19 +292,19 @@ func main() {
 
 		student := Student{}
 		// address := Address{}
-		contact := Contacts{}
+		// contact := Contacts{}
 		// identity := Identity{}
 		// qualification := Qualifications{}
 
 		collection := client.Database("gomongo").Collection("student")
 		// collection2 := client.Database("gomongo").Collection("address")
-		collection3 := client.Database("gomongo").Collection("contacts")
+		// collection3 := client.Database("gomongo").Collection("contacts")
 		// collection4 := client.Database("gomongo").Collection("identity")
 		// collection5 := client.Database("gomongo").Collection("qualifications")
 
 		err := collection.FindOne(context.TODO(), bson.M{"collegeid": collegeid}).Decode(&student)
 		// err2 := collection2.FindOne(context.TODO(), bson.M{"collegeid": collegeid}).Decode(&address)
-		err3 := collection3.FindOne(context.TODO(), bson.M{"collegeid": collegeid}).Decode(&contact)
+		// err3 := collection3.FindOne(context.TODO(), bson.M{"collegeid": collegeid}).Decode(&contact)
 		// err4 := collection4.FindOne(context.TODO(), bson.M{"collegeid": collegeid}).Decode(&identity)
 		// err5 := collection5.FindOne(context.TODO(), bson.M{"collegeid": collegeid}).Decode(&qualification)
 
@@ -313,17 +314,17 @@ func main() {
 			return
 		}
 
-		if err3 != nil {
-			fmt.Sprintf("details not found")
-			return
-		}
+		// if err3 != nil {
+		// 	fmt.Sprintf("details not found")
+		// 	return
+		// }
 		defer cancel()
 
 		c.JSON(http.StatusOK, gin.H{
 			"status":         http.StatusOK,
 			"studentDetails": student,
 			// "studentAddress":       address,
-			"studentContact": contact,
+			// "studentContact": contact,
 			// "studentIdentity":      identity,
 			// "studentQualification": qualification,
 		})
